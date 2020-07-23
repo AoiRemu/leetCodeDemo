@@ -19,6 +19,84 @@ namespace ConsoleApp1
     public class LeetCodeDemo
     {
         /// <summary>
+        /// 第一个错误的版本
+        /// </summary>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public int FirstBadVersion(int n)
+        {
+            int left = 0;
+            int right = n;
+            while (left<right)
+            {
+                int index = left + (right - left) / 2;
+                if (IsBadVersion(index))
+                {
+                    right = index;
+                }
+                else
+                {
+                    left = index + 1;
+                }
+            }
+            return left;
+        }
+        bool IsBadVersion(int version)
+        {
+            return true;
+        }
+        /// <summary>
+        /// 合并两个有序数组
+        /// </summary>
+        /// <param name="nums1"></param>
+        /// <param name="m"></param>
+        /// <param name="nums2"></param>
+        /// <param name="n"></param>
+        public void Merge(int[] nums1, int m, int[] nums2, int n)
+        {
+            int len1 = m - 1;
+            int len2 = n - 1;
+            int len = m + n - 1;
+            while (len1>=0 && len2 >= 0)
+            {
+                if (nums1[len1] > nums2[len2])
+                {
+                    nums1[len] = nums1[len1];
+                    len1--;
+                }
+                else
+                {
+                    nums1[len] = nums2[len2];
+                    len2--;
+                }
+                len--;
+            }
+            Array.Copy(nums2, 0, nums1, 0, len2 + 1);
+        }
+        /// <summary>
+        /// 将有序数组转换为二叉搜索树
+        /// </summary>
+        /// <param name="nums"></param>
+        /// <returns></returns>
+        public TreeNode SortedArrayToBST(int[] nums)
+        {
+            return SortedArrayToBSTMethod(nums, 0, nums.Length - 1);
+        }
+        private TreeNode SortedArrayToBSTMethod(int[] nums, int lo, int hi)
+        {
+            if (lo > hi)
+            {
+                return null;
+            }
+            // 以升序数组的中间元素作为根节点 root。
+            int mid = (hi + lo) / 2;
+            TreeNode root = new TreeNode(nums[mid]);
+            // 递归的构建 root 的左子树与右子树。
+            root.left = SortedArrayToBSTMethod(nums, lo, mid - 1);
+            root.right = SortedArrayToBSTMethod(nums, mid + 1, hi);
+            return root;
+        }
+        /// <summary>
         /// 二叉树的层序遍历
         /// </summary>
         /// <param name="root"></param>

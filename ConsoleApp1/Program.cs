@@ -24,14 +24,18 @@ namespace ConsoleApp1
         static void Main(string[] args)
         {
             LeetCodeDemo leetCode = new LeetCodeDemo();
-            TreeNode root = new TreeNode(1);
-            root.left = new TreeNode(2);
-            root.right = new TreeNode(2);
-            root.right.left = new TreeNode(2);
-            root.left.left = new TreeNode(2);
-            var num = leetCode.LevelOrder(root);
-            Console.WriteLine(num);
+            int[] nums1 = new int[] { 1 };
+            int[] nums2 = new int[] { };
+            leetCode.Merge(nums1, 1, nums2, 0);
+           
             Console.ReadKey();
+        }
+        static void WriteY()
+        {
+            for (int i = 0; i < 100; i++)
+            {
+                Console.Write("y");
+            }
         }
         private static void Demo()
         {
