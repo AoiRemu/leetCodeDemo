@@ -16,6 +16,12 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Web.UI.WebControls;
+using System.Collections;
+using System.Drawing.Imaging;
+using System.Drawing;
+using System.Xml;
+using System.Reflection;
+using Newtonsoft.Json;
 
 namespace ConsoleApp1
 {
@@ -24,66 +30,122 @@ namespace ConsoleApp1
         static void Main(string[] args)
         {
             LeetCodeDemo leetCode = new LeetCodeDemo();
-            int[] nums1 = new int[] { 1 };
-            int[] nums2 = new int[] { };
-            leetCode.Merge(nums1, 1, nums2, 0);
-           
+            Stopwatch stopwatch = new Stopwatch();
+            List<int> list = new List<int>();
+            stopwatch.Start();
+            
+            stopwatch.Stop();
+            Console.WriteLine($"耗时{stopwatch.ElapsedMilliseconds}ms");
             Console.ReadKey();
         }
-        static void WriteY()
+        public static void TranslateRun()
         {
-            for (int i = 0; i < 100; i++)
-            {
-                Console.Write("y");
-            }
-        }
-        private static void Demo()
-        {
-            Console.Write("请输入主体：");
-            string main = Console.ReadLine();
-            Console.Write("请输入事件：");
-            string eventStr = Console.ReadLine();
-            Console.Write("请输入另一种说法：");
-            string another = Console.ReadLine();
-            Console.WriteLine($"{main}{eventStr}是怎么回事呢？{main}相信大家都很熟悉，但{main}{eventStr}是怎么回事呢，下面就让小编带大家一起了解吧。");
-            Console.WriteLine($"{main}{eventStr}其实就是{another}，大家可能会惊讶{main}怎么会{eventStr}了呢？但事实就是这样，小编也感到非常惊讶。");
-            Console.WriteLine($"这就是关于{main}{eventStr}的事情，大家有什么想法呢，欢迎在评论区告诉小编一起讨论哦！");
-        }
-        private static void DoSpider()
-        {
-            Console.WriteLine("---------百度图片爬虫------------");
-            Console.WriteLine("请输入存储图片的路径：");
-            string path = Console.ReadLine();
-            Console.WriteLine("请输入起始爬取页码：");
-            int beginPage = Convert.ToInt32(Console.ReadLine());
-            Console.WriteLine("请输入终止爬取页码：");
-            int endPage = Convert.ToInt32(Console.ReadLine());
-            Console.WriteLine("请输入图片搜索关键字：");
-            string word = Console.ReadLine();
-            Spider.DownloadBaiduImgByJson(word, beginPage, endPage, path, 1).Wait();
-        }
+            const string SAVE_PATH = "C:\\Users\\Administrator\\Desktop\\Test\\";
+            const string FILE_PATH = @"G:\github项目\DLPPLUS.Web_wait\DlpPlus.Web\clientapp\src\components\Policy";
 
-        private static void Spider_test(string url)
-        {
-            SimpleCrawler crawler = new SimpleCrawler();
-            crawler.OnStart += (s, e) =>
+            //获取已有json语言库
+            string jsonStr = File.ReadAllText(@"G:\github项目\DLPPLUS.Web_wait\DlpPlus.Web\clientapp\public\lang\lang.json");
+            JObject resultJson = JObject.Parse(jsonStr);
+            JToken cnJson = resultJson.SelectToken("CN");
+            JToken enJson = resultJson.SelectToken("EN");
+            //将已有语言库加入字典
+            var dicZH = JsonHelper.GetDicByJson(cnJson);
+            var dicEN = JsonHelper.GetDicByJson(enJson);
+            //获取目录下的所有文件
+            var fileList = FileHelper.GetAllFiles(FILE_PATH);
+            string rootPath = FILE_PATH.Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries).Last();
+            TransBaidu trans = new TransBaidu();
+            FileStream fs;
+            //遍历文件进行处理
+            foreach (var item in fileList)
             {
-                Console.WriteLine("开始抓取:" + e.Uri.ToString());
-            };
-            crawler.OnError += (s, e) =>
-            {
-                Console.WriteLine("抓取出现错误:" + e.Message);
-            };
-            crawler.OnCompleted += (s, e) =>
-            {
-                Console.WriteLine(e.PageSource);
-                Console.WriteLine("===========================");
-                Console.WriteLine("抓取完成");
-                Console.WriteLine("耗时：" + e.Milliseconds + "毫秒");
-                Console.WriteLine("线程：" + e.ThreadId);
-                Console.WriteLine("地址：" + e.Uri.ToString());
-            };
-            crawler.Start(new Uri(url)).Wait();
+                try
+                {
+                    //读取文件字符串
+                    fs = item.OpenRead();
+                    byte[] bytes = new byte[fs.Length];
+                    fs.Read(bytes, 0, bytes.Length);
+                    string htmlStr = Encoding.UTF8.GetString(bytes);
+                    fs.Close();
+                    fs = null;
+                    //匹配大多数汉字出现的位置
+                    var matchs = Regex.Matches(htmlStr, "[>\"'][\u4e00-\u9fa5]+[<\"']");
+                    int num = 0;//同名键的后缀
+                    foreach (Match match in matchs)
+                    {
+                        num++;
+                        string start = match.Value.Substring(0, 1);
+                        string end = match.Value.Substring(match.Value.Length - 1, 1);
+                        //去除前后缀的字符，翻译
+                        string value = match.Value.Substring(1, match.Value.Length - 2);
+                        //如果字典中有这个值，则直接替换
+                        if (dicZH.ContainsValue(value))
+                        {
+                            //替换时，去掉CN或者EN的前缀
+                            //htmlStr = htmlStr.Replace(match.Value, $"{start}$t('{dicZH.FirstOrDefault(a => a.Value == value).Key.Substring(3)}'){end}");
+                            htmlStr = FileHelper.ReplaceHtml(htmlStr, start, value, end, dicZH.FirstOrDefault(a => a.Value == value).Key.Substring(3));
+                        }
+                        else
+                        {
+                            var transData = trans.Translate_ZhToEn(value);
+                            //api调用限制为1秒
+                            Thread.Sleep(1000);
+                            //调用成功
+                            if (transData.Code == 0 || transData.Code == 52000)
+                            {
+                                if (!string.IsNullOrEmpty(transData.Msg))
+                                {
+                                    //写入jobject语言库，将文件中的汉字替换为$t("xxxx.xxx")格式
+                                    var CN_TempJson = (JObject)JsonHelper.GetJsonByFilePath(cnJson, rootPath, item.FullName);
+                                    var EN_TempJson = (JObject)JsonHelper.GetJsonByFilePath(enJson, rootPath, item.FullName);
+                                    //处理得到json键
+                                    string msgTrim = transData.Msg.Replace(" ", "").Replace("'", "");
+                                    string transKey = msgTrim.Length > 8 ? msgTrim.Substring(0, 8) : msgTrim;
+                                    transKey = CN_TempJson.ContainsKey(transKey) ? transKey + $"_{num}" : transKey;
+                                    //写入json值
+                                    CN_TempJson.Add(transKey, value);
+                                    EN_TempJson.Add(transKey, transData.Msg);
+                                    //写入字典
+                                    var transJson = CN_TempJson.Property(transKey);
+                                    dicZH.Add(transJson.Path, value);
+                                    dicEN.Add(transJson.Path, transData.Msg);
+                                    //替换文本
+                                    //htmlStr = htmlStr.Replace(match.Value, $"{start}$t('{transJson.Path.Substring(3)}'){end}");
+                                    htmlStr = FileHelper.ReplaceHtml(htmlStr, start, value, end, transJson.Path.Substring(3));
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine($"关键字[{value}]调用API失败，位置：{item.FullName}，错误信息:{transData.Msg}");
+                            }
+                        }
+
+                    }
+                    //此文件翻译完成，文件写入指定保存位置
+                    string rootFilePath = item.FullName.Substring(item.FullName.IndexOf(rootPath));
+                    //检查目录是否存在
+                    string checkPath = SAVE_PATH;
+                    var checkArr = rootFilePath.Split('\\');
+                    for (var i = 0; i < checkArr.Length - 1; i++)
+                    {
+                        checkPath += ("\\" + checkArr[i]);
+                        if (!Directory.Exists(checkPath))
+                        {
+                            Directory.CreateDirectory(checkPath);
+                        }
+                    }
+                    File.WriteAllText(SAVE_PATH + rootFilePath, htmlStr, Encoding.UTF8);
+                    Console.WriteLine($"文件翻译成功！位置:{SAVE_PATH + rootFilePath}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"程序错误！文件:{item.FullName},错误信息：{ex.Message}");
+                }
+
+            }
+            //将json转化为文件
+            File.WriteAllText(SAVE_PATH + @"result.json", JsonConvert.SerializeObject(resultJson));
+            Console.WriteLine("所有文件翻译完成");
         }
 
         //p站spider
