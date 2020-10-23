@@ -70,6 +70,7 @@
     <Compile Include="Algorithm.cs" />
     <Compile Include="CodeTujie.cs" />
     <Compile Include="FileHelper.cs" />
+    <Compile Include="IpApi.cs" />
     <Compile Include="JsonHelper.cs" />
     <Compile Include="LeetCodeDemo.cs" />
     <Compile Include="MGMQ_Demo.cs" />

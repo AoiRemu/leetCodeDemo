@@ -50,6 +50,7 @@ namespace ConsoleApp1
                     string temp = $"{item.Value.Substring(0, item.Value.IndexOf(value)-1).Insert(1,":")}\"$t('{result}')\"";
                     htmlStr = htmlStr.Replace(item.Value, temp);
                 }
+                htmlStr = htmlStr.Replace(start + value + end, $"$t('{result}')");
             }
             else if (start == ">")
             {
@@ -57,7 +58,7 @@ namespace ConsoleApp1
             }
             else
             {
-                htmlStr = htmlStr.Replace(start + value + end, $"{start}$t(\"{result}\"){end}");
+                htmlStr = htmlStr.Replace(start + value + end, $"$t('{result}')");
             }
             return htmlStr;
         }

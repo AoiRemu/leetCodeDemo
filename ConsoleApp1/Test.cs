@@ -58,4 +58,36 @@ namespace ConsoleApp1
         public ListNode next;
         public ListNode(int x) { this.val = x; }
     }
+    public interface IA
+    {
+        public void Show(string str);
+    }
+    public class A:IA
+    {
+        public void Show(string str)
+        {
+            Console.WriteLine($"A类说：{str}");
+        }
+    }
+    public class B
+    {
+        private IA a;
+        public B(IA a)
+        {
+            this.a = a;
+        }
+        public void DoSomething()
+        {
+            int num = new Random().Next(0, 1);
+            string str = "Hello";
+            if (num > 0)
+            {
+                a.Show(str);
+            }
+            else
+            {
+                Console.WriteLine($"B类说:{str}");
+            }
+        }
+    }
 }

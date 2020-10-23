@@ -22,6 +22,8 @@ using System.Drawing;
 using System.Xml;
 using System.Reflection;
 using Newtonsoft.Json;
+using System.Linq.Expressions;
+using System.ComponentModel;
 
 namespace ConsoleApp1
 {
@@ -33,120 +35,74 @@ namespace ConsoleApp1
             Stopwatch stopwatch = new Stopwatch();
             List<int> list = new List<int>();
             stopwatch.Start();
-            
+
+
+            {
+
+                //LabelTarget labelBreak = Expression.Label();//中断目标  一个标识，标志某个循环或者switch之类的，用于中断或者跳过
+                //ParameterExpression loopIndex = Expression.Parameter(typeof(int), "index");//for循环的 i 
+
+                //BlockExpression block = Expression.Block(//方法块
+                //    new[] { loopIndex },//局部变量参数
+                //    Expression.Loop(//for
+                //        Expression.IfThenElse(Expression.LessThanOrEqual(loopIndex, Expression.Constant(10)),//if(i<=10)
+                //        Expression.Block(
+                //            Expression.Call(null, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) }),Expression.Constant("Hello")),//Console.WriteLine("Hello");
+                //            Expression.PostIncrementAssign(loopIndex)),//i++
+                //        Expression.Break(labelBreak)//else { break;}
+                //        ), labelBreak));
+
+                //Expression<Action> expre = Expression.Lambda<Action>(block);
+                //expre.Compile().Invoke();
+                //JObject applyData = JObject.Parse("{\"contents\":[{\"control\":\"Textarea\",\"id\":\"item-item-1493800414708\",\"title\":[{\"text\":\"加班事由\",\"lang\":\"zh_CN\"}],\"value\":{\"text\":\"加班\",\"tips\":[],\"members\":[],\"departments\":[],\"files\":[],\"children\":[],\"stat_field\":[],\"sum_field\":[],\"related_approval\":[],\"students\":[],\"classes\":[]}},{\"control\":\"Attendance\",\"id\":\"smart-time\",\"title\":[{\"text\":\"加班\",\"lang\":\"zh_CN\"}],\"value\":{\"tips\":[],\"members\":[],\"departments\":[],\"files\":[],\"children\":[],\"stat_field\":[],\"attendance\":{\"date_range\":{\"type\":\"hour\",\"new_begin\":1596243600,\"new_end\":1596276000,\"new_duration\":32400},\"type\":5},\"sum_field\":[],\"related_approval\":[],\"students\":[],\"classes\":[]}}]}");
+                //var contents = applyData.SelectToken("contents")?.Children().ToList();
+                //int type = 0;
+                //double begin = 0;
+                //double end = 0;
+                //double new_duration = 0;
+                //foreach (JObject control in contents)
+                //{
+                //    if (control.SelectToken("control")?.Value<string>() == "Attendance")
+                //    {
+                //        var value = (JObject)control.SelectToken("value");
+                //        var attendance = (JObject)value.SelectToken("attendance");
+                //        type = attendance.SelectToken("type").Value<int>();
+                //        var date_range = (JObject)attendance.SelectToken("date_range");
+                //        //begin = date_range.SelectToken("new_begin").Value<double>();
+                //        begin=control.SelectToken("value").SelectToken("attendance").SelectToken("date_range").SelectToken("new_begin").Value<double>();
+                //        end = date_range.SelectToken("new_end").Value<double>();
+                //        new_duration = date_range.SelectToken("new_duration").Value<double>();
+                //    }
+                //}
+                //Console.WriteLine($"{type}\n{begin}\n{end}\n{new_duration}");
+
+
+                string logLine = "EC12-0001EC12 2020/04/22 17:00:12 157	04/80010000	FileAudit.cpp       (  881)	ExeSvc.exe          (  0/  1276/  3424)	[FileAudit] 执行文件上传.";
+                var logLineBlockArr = logLine.Split(new string[] { "\t" }, StringSplitOptions.RemoveEmptyEntries);
+                var LogTime = Convert.ToDateTime(logLineBlockArr[0].Substring(logLineBlockArr[0].IndexOf(" ") + 1, 19) + "." + logLineBlockArr[0].Substring(logLineBlockArr[0].IndexOf(" ") + 21, 3));
+                var lvAndType = logLineBlockArr[1].Split('/');
+                var LogLevel = Convert.ToInt32(lvAndType[0]);
+                var LogType = lvAndType[1];
+                var  FileNameLine = logLineBlockArr[2].Replace(" ", "");
+                var ProcessName = logLineBlockArr[3].Substring(0, 39).Substring(0, 20).Trim();
+                var iDs = logLineBlockArr[3].Substring(21, 17).Replace(" ", "").Split('/');
+                var SessionId = Convert.ToInt32(iDs[0]);
+                var ProcessId = Convert.ToInt32(iDs[1]);
+                var ThreadId = Convert.ToInt32(iDs[2]);
+
+                var message = logLineBlockArr[4];
+                var Message = message;
+                Console.ReadKey();
+            }
+
+
             stopwatch.Stop();
             Console.WriteLine($"耗时{stopwatch.ElapsedMilliseconds}ms");
             Console.ReadKey();
         }
-        public static void TranslateRun()
-        {
-            const string SAVE_PATH = "C:\\Users\\Administrator\\Desktop\\Test\\";
-            const string FILE_PATH = @"G:\github项目\DLPPLUS.Web_wait\DlpPlus.Web\clientapp\src\components\Policy";
 
-            //获取已有json语言库
-            string jsonStr = File.ReadAllText(@"G:\github项目\DLPPLUS.Web_wait\DlpPlus.Web\clientapp\public\lang\lang.json");
-            JObject resultJson = JObject.Parse(jsonStr);
-            JToken cnJson = resultJson.SelectToken("CN");
-            JToken enJson = resultJson.SelectToken("EN");
-            //将已有语言库加入字典
-            var dicZH = JsonHelper.GetDicByJson(cnJson);
-            var dicEN = JsonHelper.GetDicByJson(enJson);
-            //获取目录下的所有文件
-            var fileList = FileHelper.GetAllFiles(FILE_PATH);
-            string rootPath = FILE_PATH.Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries).Last();
-            TransBaidu trans = new TransBaidu();
-            FileStream fs;
-            //遍历文件进行处理
-            foreach (var item in fileList)
-            {
-                try
-                {
-                    //读取文件字符串
-                    fs = item.OpenRead();
-                    byte[] bytes = new byte[fs.Length];
-                    fs.Read(bytes, 0, bytes.Length);
-                    string htmlStr = Encoding.UTF8.GetString(bytes);
-                    fs.Close();
-                    fs = null;
-                    //匹配大多数汉字出现的位置
-                    var matchs = Regex.Matches(htmlStr, "[>\"'][\u4e00-\u9fa5]+[<\"']");
-                    int num = 0;//同名键的后缀
-                    foreach (Match match in matchs)
-                    {
-                        num++;
-                        string start = match.Value.Substring(0, 1);
-                        string end = match.Value.Substring(match.Value.Length - 1, 1);
-                        //去除前后缀的字符，翻译
-                        string value = match.Value.Substring(1, match.Value.Length - 2);
-                        //如果字典中有这个值，则直接替换
-                        if (dicZH.ContainsValue(value))
-                        {
-                            //替换时，去掉CN或者EN的前缀
-                            //htmlStr = htmlStr.Replace(match.Value, $"{start}$t('{dicZH.FirstOrDefault(a => a.Value == value).Key.Substring(3)}'){end}");
-                            htmlStr = FileHelper.ReplaceHtml(htmlStr, start, value, end, dicZH.FirstOrDefault(a => a.Value == value).Key.Substring(3));
-                        }
-                        else
-                        {
-                            var transData = trans.Translate_ZhToEn(value);
-                            //api调用限制为1秒
-                            Thread.Sleep(1000);
-                            //调用成功
-                            if (transData.Code == 0 || transData.Code == 52000)
-                            {
-                                if (!string.IsNullOrEmpty(transData.Msg))
-                                {
-                                    //写入jobject语言库，将文件中的汉字替换为$t("xxxx.xxx")格式
-                                    var CN_TempJson = (JObject)JsonHelper.GetJsonByFilePath(cnJson, rootPath, item.FullName);
-                                    var EN_TempJson = (JObject)JsonHelper.GetJsonByFilePath(enJson, rootPath, item.FullName);
-                                    //处理得到json键
-                                    string msgTrim = transData.Msg.Replace(" ", "").Replace("'", "");
-                                    string transKey = msgTrim.Length > 8 ? msgTrim.Substring(0, 8) : msgTrim;
-                                    transKey = CN_TempJson.ContainsKey(transKey) ? transKey + $"_{num}" : transKey;
-                                    //写入json值
-                                    CN_TempJson.Add(transKey, value);
-                                    EN_TempJson.Add(transKey, transData.Msg);
-                                    //写入字典
-                                    var transJson = CN_TempJson.Property(transKey);
-                                    dicZH.Add(transJson.Path, value);
-                                    dicEN.Add(transJson.Path, transData.Msg);
-                                    //替换文本
-                                    //htmlStr = htmlStr.Replace(match.Value, $"{start}$t('{transJson.Path.Substring(3)}'){end}");
-                                    htmlStr = FileHelper.ReplaceHtml(htmlStr, start, value, end, transJson.Path.Substring(3));
-                                }
-                            }
-                            else
-                            {
-                                Console.WriteLine($"关键字[{value}]调用API失败，位置：{item.FullName}，错误信息:{transData.Msg}");
-                            }
-                        }
+        
 
-                    }
-                    //此文件翻译完成，文件写入指定保存位置
-                    string rootFilePath = item.FullName.Substring(item.FullName.IndexOf(rootPath));
-                    //检查目录是否存在
-                    string checkPath = SAVE_PATH;
-                    var checkArr = rootFilePath.Split('\\');
-                    for (var i = 0; i < checkArr.Length - 1; i++)
-                    {
-                        checkPath += ("\\" + checkArr[i]);
-                        if (!Directory.Exists(checkPath))
-                        {
-                            Directory.CreateDirectory(checkPath);
-                        }
-                    }
-                    File.WriteAllText(SAVE_PATH + rootFilePath, htmlStr, Encoding.UTF8);
-                    Console.WriteLine($"文件翻译成功！位置:{SAVE_PATH + rootFilePath}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"程序错误！文件:{item.FullName},错误信息：{ex.Message}");
-                }
-
-            }
-            //将json转化为文件
-            File.WriteAllText(SAVE_PATH + @"result.json", JsonConvert.SerializeObject(resultJson));
-            Console.WriteLine("所有文件翻译完成");
-        }
 
         //p站spider
         public static void PixivSpider()
